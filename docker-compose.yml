@@ -9,7 +9,7 @@ volumes:
 
 services:
   capture:
-    image: mdasaad/traffic-capture:v1.0.0
+    image: mdasaad/traffic-capture:latest
     devices:
       - "/dev/video0:/dev/video0"
     volumes:
@@ -27,7 +27,7 @@ services:
       retries: 3
   
   detector:
-    image: mdasaad/traffic-detector:v1.0.0
+    image: mdasaad/traffic-detector:latest
     volumes:
       - shared_frames:/frames:ro
     shm_size: 256mb
@@ -45,7 +45,7 @@ services:
       - pipeline_net
 
   dashboard:
-    image: mdasaad/traffic-dashboard:v1.0.0
+    image: mdasaad/traffic-dashboard:latest
     ports:
       - "8080:8080"
     volumes:
