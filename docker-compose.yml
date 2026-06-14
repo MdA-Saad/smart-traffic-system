@@ -1,0 +1,62 @@
+version: '3.8'
+
+networks:
+  pipeline_net:
+
+volumes:
+  shared_frames:
+  db_data:
+
+services:
+  capture:
+    image: mdasaad/traffic-capture:v1.0.0
+    devices:
+      - "/dev/video0:/dev/video0"
+    volumes:
+      - shared_frames:/frames
+    environment:
+      - camera_ID=0
+      - FPS=5
+    restart: unless-stopped
+    networks:
+      - pipeline_net
+    healthcheck:
+      test: ["CMD", "sh", "-c", "ls /frames/*.jpg | head -1 | xargs test -e"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+  
+  detector:
+    image: mdasaad/traffic-detector:v1.0.0
+    volumes:
+      - shared_frames:/frames:ro
+    shm_size: 256mb
+    environment:
+      - MODEL=yolo8n.pt
+      - CONF_THRESH=0.5
+      - DASHBOARD_URL=http://dashboard:8080/api/detections
+    restart: unless-stopped
+    depends_on:
+      capture:
+        condition: service_healthy
+      dashboard:
+        condition: service_started
+    networks:
+      - pipeline_net
+
+  dashboard:
+    image: mdasaad/traffic-dashboard:v1.0.0
+    ports:
+      - "8080:8080"
+    volumes:
+      - db_data:/data
+    environment:
+      - DB_PATH=/data/detections.db
+    restart: unless-stopped
+    networks:
+      - pipeline_net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 20s
+      timeout: 5s
+      retries: 3
